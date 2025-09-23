@@ -1,0 +1,17 @@
+rules:
+  - id: nosql-injection-mongoose
+    patterns:
+      - pattern: |
+          $OBJ.updateOne($QUERY, $UPDATE)
+      - pattern: |
+          $OBJ.updateMany($QUERY, $UPDATE)
+      - pattern: |
+          $OBJ.findOneAndUpdate($QUERY, $UPDATE)
+      - pattern-not: |
+          $OBJ.updateOne({ $SAFE_KEY: $SAFE_VALUE }, $UPDATE)
+    message: "Possible NoSQL injection: user input used directly in Mongoose query"
+    languages: [javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: nodejs/mongoose
