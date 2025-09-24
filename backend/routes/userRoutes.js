@@ -1,27 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const {protect, admin,authorizeRoles} = require('../middleware/authMiddleware');
+const {protect} = require('../middleware/authMiddleware');
 
-const csrf = require('csurf');
+const { authUser, registerUser, getUserProfile, updateUserProfile, getUsers, deleteUser, getUserById, updateUser, getUserStats } = require('../controllers/userController');
+const {  loginRateLimiter } = require('../middleware/loginLimiter');
+//const { authorizeRoles } = require('../middleware/authorizeRoles');
 
-// CSRF middleware
-const csrfProtection = csrf({ cookie: true });
+router.post('/', registerUser)
+router.post('/login',loginRateLimiter, authUser)
 
+router.get('/profile', protect, getUserProfile)
+router.put('/profile', protect, updateUserProfile)
 
-
-const { authUser, registerUser, getUserProfile, updateUserProfile, getUsers, deleteUser, getUserById, updateUser, getUserStats } = require('../controllers/userController')
-
-// State-changing routes with CSRF protection
-router.post('/', csrfProtection, registerUser);                     // Register user
-router.post('/login', csrfProtection, authUser);                    // Login (optional, prevents login CSRF)
-router.put('/profile', protect, csrfProtection, updateUserProfile); // Update profile
-router.delete('/:id', protect, authorizeRoles('admin'), csrfProtection, deleteUser);  // Delete user
-router.put('/:id', protect, authorizeRoles('admin'), csrfProtection, updateUser);     // Update user
-
-// GET routes remain unprotected
-router.get('/profile', protect, getUserProfile);
-router.get('/', protect, authorizeRoles('admin'), getUsers);
-router.get('/:id', protect, authorizeRoles('admin'), getUserById);
-router.get('/stats', protect, authorizeRoles('admin'), getUserStats);
+//router.get('/',protect,authorizeRoles(1,3), getUsers)
+router.get('/:id', protect, getUserById)
+router.delete('/:id', protect, deleteUser)
+router.put('/:id', protect, updateUser)
+router.get('/stats', protect, getUserStats)
 
 module.exports = router;

@@ -43,6 +43,7 @@ import ReleasedItems from './pages/Inventory/released-items/ReleasedItems';
 import UpdateSupplierDetails from './pages/Inventory/update-supplier-page/update-supplier'
 import OrdersReport from "./pages/Inventory/generate-reports/OrdersReport";
 import Login from './pages/Signin&Signup/Page';
+import OAuthSuccess from './pages/Signin&Signup/OAuthSuccess';
 import ReleaseSearch from './pages/Inventory/release-search/ReleaseSearch';
 import RopCalculator from './pages/Inventory/rop-calculator/RopCalc'
 
@@ -169,6 +170,7 @@ function App() {
         <Route path="/" element={<HomePage/>} />
         <Route path="/admin/inventory/rop-calculator" element={<RopCalculator/>} />
         <Route path="/login" element={<Login/>} />
+        <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route path="/services" element={<AppBlog/>} />
 
 

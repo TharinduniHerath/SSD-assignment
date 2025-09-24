@@ -1,78 +1,169 @@
-import React, { useContext, useState,useEffect } from 'react'
-import { publicRequest,userRequest} from '../../requestMethods'
-import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
-import { UserContext } from '../../contexts/UserContext';
-import './SigninSignupStyles.scss'
-
+import { useRef, useState,useEffect } from "react";
+import { publicRequest } from "../../requestMethods";
+import { useNavigate } from "react-router-dom";
+import "./SigninSignupStyles.scss";
+import axiosClient from "../../axios-client";
+import { useStateContext } from "../../contexts/NavigationContext.js";
+import { oauthService } from "../../services/oauthService.js";
+import axios from "axios"
 function Signin() {
+  const { setUser, setToken } = useStateContext();
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+  const navigate = useNavigate();
+  const emailRef = useRef();
+  const passwordRef = useRef();
 
-  const navigate = useNavigate()
+  const [formErrors, setFormErrors] = useState({
+    email: "",
+    password: "",
+  });
 
-  const {user, setUser} = useContext(UserContext)
+  const validate = (loginData) => {
+    const errors = {};
+    if (!loginData.email) {
+      errors.email = "Email is required";
+    } else if (!loginData.email.includes("@")) {
+      errors.email = "Enter a valid Email address";
+    }
+    if (!loginData.password) {
+      errors.password = "Password is required";
+    }
+    setFormErrors(errors);
+    return errors;
+  };
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const handleLogin = (e) => {
+    e.preventDefault();
 
-  // set this state variable true if you want to display the error
-  const[errorState , setErrorState] = useState(false)
+    const loginData = {
+      email: emailRef.current.value,
+      password: passwordRef.current.value,
+    };
 
-  // 1️⃣ Add CSRF token state
-const [csrfToken, setCsrfToken] = useState("");
+    
 
-// 2️⃣ Fetch CSRF token when the component mounts
-useEffect(() => {
-  const fetchCsrfToken = async () => {
-    try {
-      const { data } = await userRequest.get("/api/csrf-token");
-      setCsrfToken(data.csrfToken);
-    } catch (err) {
-      console.log("Failed to fetch CSRF token", err);
+    const validationErrors = validate(loginData);
+
+    if (Object.keys(validationErrors).length === 0) {
+      axiosClient
+        .post("/users/login", loginData)
+        .then(({ data }) => {
+          setUser(data.user);
+          console.log("User set successfully");
+          navigate("/");
+        })
+        .catch(({ response }) => {
+          console.log(response);
+          if (response && response.status === 400) {
+            setAlertMessage("Invalid Email or Password");
+            setShowAlert(true);
+          } else if (response && response.status === 429) {
+            setAlertMessage(
+              "Too many login attempts, please try again after 15 minutes."
+            );
+            setShowAlert(true);
+          } else if (response && response.status === 403) {
+            const lockMessage =
+              response.data?.message ||
+              "Your account is locked. Please try again later.";
+            setAlertMessage(lockMessage);
+            setShowAlert(true);
+          } else {
+            setAlertMessage(response?.data.error || "An error occurred");
+            setShowAlert(true);
+          }
+        });
     }
   };
-  fetchCsrfToken();
-}, []);
 
-  const signinSubmitHandler = (e) => {
-    e.preventDefault()
 
-    publicRequest.post("/users/login", { email, password },{headers: { "csrf-token": csrfToken }})
-    .then(res => {
-        if(res.status === 200) {
-          setErrorState(false)
-          setUser(res.data)
-          if(res.data.isAdmin === true)
-            navigate('/admin/products/insights')
-          else
-            navigate('/')
-        }
-    }).catch(err => {
-        setErrorState(true)
-        // toast.error(err.response.data.message)
-    })
-  }
+   const handleGoogleLogin = () => {
+    oauthService.loginWithGoogle();
+    };
 
   return (
     <div className="signin-signup-cpt-frame">
-        <form onSubmit={signinSubmitHandler}>
-              {/* email container */}
-              <div className="input-container-signin-signup">
-                <span className="signin-signup-label">Email*</span>
-                <input type="email" className="signin-signup-input-field" placeholder='Enter your email' value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              {/* password container */}
-              <div className="input-container-signin-signup">
-                <span className="signin-signup-label">Password*</span>
-                <input type="password" className="signin-signup-input-field" placeholder='Enter your password' value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-              {/* error message */}
-              <span className={errorState ? `error-state-signin` : `error-state-signin hide`}>
-               Incorrect email or password!
-              </span>
-              <button type='submit' className="signin-signup-btn">Sign in</button>
-        </form>
+      <form onSubmit={handleLogin}>
+        {/* email container */}
+        <div className="input-container-signin-signup">
+          <span className="signin-signup-label">Email*</span>
+          <input
+            type="email"
+            className="signin-signup-input-field"
+            placeholder="Enter your email"
+            ref={emailRef}
+          />
+          {formErrors.email && (
+            <span style={{ fontSize: "13px", color: "red" }}>
+              {formErrors.email}
+            </span>
+          )}
+        </div>
+
+        {/* password container */}
+        <div className="input-container-signin-signup">
+          <span className="signin-signup-label">Password*</span>
+          <input
+            type="password"
+            className="signin-signup-input-field"
+            placeholder="Enter your password"
+            ref={passwordRef}
+          />
+          {formErrors.password && (
+            <span style={{ fontSize: "13px", color: "red" }}>
+              {formErrors.password}
+            </span>
+          )}
+        </div>
+        {/* error message */}
+        {showAlert && (
+          <div style={{ fontSize: "13px", color: "red" }}>{alertMessage}</div>
+        )}
+        <button
+          type="submit"
+          className="signin-signup-btn"
+          style={{ cursor: "pointer" }}
+        >
+          Sign in
+        </button>
+        <br />
+        <br />
+        <center>or</center>
+        <br />
+      </form>
+              <button 
+              type="button" 
+              className="button22" 
+              onClick={handleGoogleLogin}
+              >
+          <svg
+            className="button-svg"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMidYMid"
+            viewBox="0 0 256 262"
+          >
+            <path
+              fill="#4285F4"
+              d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
+            ></path>
+            <path
+              fill="#34A853"
+              d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
+            ></path>
+            <path
+              fill="#FBBC05"
+              d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782"
+            ></path>
+            <path
+              fill="#EB4335"
+              d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
+            ></path>
+          </svg>
+          Continue with Google
+        </button>
     </div>
-  )
+  );
 }
 
-export default Signin
+export default Signin;

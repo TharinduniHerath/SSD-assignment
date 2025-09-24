@@ -11,21 +11,21 @@ function Signup() {
 
   const {user, setUser} = useContext(UserContext)
 
-  // 1️⃣ Add CSRF token state
-const [csrfToken, setCsrfToken] = useState("");
+//   // 1️⃣ Add CSRF token state
+// const [csrfToken, setCsrfToken] = useState("");
 
-// 2️⃣ Fetch CSRF token when the component mounts
-useEffect(() => {
-  const fetchCsrfToken = async () => {
-    try {
-      const { data } = await userRequest.get("/api/csrf-token");
-      setCsrfToken(data.csrfToken);
-    } catch (err) {
-      console.log("Failed to fetch CSRF token", err);
-    }
-  };
-  fetchCsrfToken();
-}, []);
+// // 2️⃣ Fetch CSRF token when the component mounts
+// useEffect(() => {
+//   const fetchCsrfToken = async () => {
+//     try {
+//       const { data } = await userRequest.get("/api/csrf-token");
+//       setCsrfToken(data.csrfToken);
+//     } catch (err) {
+//       console.log("Failed to fetch CSRF token", err);
+//     }
+//   };
+//   fetchCsrfToken();
+// }, []);
 
   // set this state variable true if you want to display the error
   const[errorState , setErrorState] = useState(false)
@@ -51,7 +51,7 @@ useEffect(() => {
     else{
       setErrorState(false)
 
-      publicRequest.post("/users", { username: passwordValidator.username, email: passwordValidator.email, password: passwordValidator.password },{headers: { "csrf-token": csrfToken }})
+      publicRequest.post("/users", { username: passwordValidator.username, email: passwordValidator.email, password: passwordValidator.password })
       .then(res => {
           if(res.status === 201) {
             setUser(res.data)
@@ -80,7 +80,7 @@ useEffect(() => {
                {/* password container */}
               <div className="input-container-signin-signup">
                 <span className="signin-signup-label">Password*</span>
-                <input type="password" pattern="^[a-zA-Z0-9]{8,}$" title="Password must contain at least 8 characters, consisting of letters and digits" className="signin-signup-input-field" placeholder='Enter your password' name='password' value={passwordValidator.password} onChange={signUpFieldHandler} required/>
+                <input type="password" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" title="Password must contain at least 8 characters, consisting of letters and digits" className="signin-signup-input-field" placeholder='Enter your password' name='password' value={passwordValidator.password} onChange={signUpFieldHandler} required/>
               </div>
                {/* confirm password container */}
               <div className="input-container-signin-signup">
