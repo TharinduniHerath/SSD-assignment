@@ -12,6 +12,10 @@ const cookieParser = require("cookie-parser"); // Add cookie-parser
  
 const session = require("express-session");
 const passport = require("passport");
+const helmet = require('helmet');
+const fs = require('fs');
+const https = require('https');
+const path = require('path');
 
  // Configure new Passport implementation
 require('./config/passport')(passport);
@@ -56,12 +60,34 @@ const medicineRoutes = require("./routes/medicineRoutes");
 //appointment management
 const appointmentRoutes = require("./routes/appointmentRoutes");
 
+// uploads
+const uploadRoutes = require('./routes/uploadRoutes');
+
 const port = process.env.PORT || 4000;
 
 const app = express();
 
-// Apply security configurations
-//app.use(securityConfig());
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Security headers via Helmet
+app.use(helmet({
+  hidePoweredBy: true,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+    }
+  },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
+}));
 
 // CSP violation reporting endpoint
 // app.post("/report-csp-violations", express.json(), (req, res) => {
@@ -153,8 +179,35 @@ app.use("/api/medicines", medicineRoutes);
 //appointment management
 app.use("/api/appointments", appointmentRoutes);
 
+// upload routes
+app.use('/api/upload', uploadRoutes);
+
 app.use(errorHandler);
 
 connectDB();
 
-app.listen(port, () => console.log(`🚀 Server started on port ${port}`));
+// Optional HTTPS dev server
+function startServers() {
+  const httpPort = port;
+  app.listen(httpPort, () => console.log(`🚀 Server started on port ${httpPort}`));
+
+  const certPath = process.env.SSL_CERT_PATH;
+  const keyPath = process.env.SSL_KEY_PATH;
+  const httpsPort = process.env.HTTPS_PORT;
+
+  if (certPath && keyPath && httpsPort) {
+    try {
+      const options = {
+        key: fs.readFileSync(path.resolve(keyPath)),
+        cert: fs.readFileSync(path.resolve(certPath))
+      };
+      https.createServer(options, app).listen(httpsPort, () => {
+        console.log(`🔐 HTTPS server started on port ${httpsPort}`);
+      });
+    } catch (e) {
+      console.error('HTTPS server failed to start:', e.message);
+    }
+  }
+}
+
+startServers();
