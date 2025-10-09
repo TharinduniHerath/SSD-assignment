@@ -88,3 +88,6 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Ignore security writeups and reports
+Fixes/
